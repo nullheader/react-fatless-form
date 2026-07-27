@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "5.0.2",
+  "version": "5.0.3",
   "description": "Monorepo for react-fatless-form, react-fatless-form-web, react-fatless-form-native, and their examples.",
   "packageManager": "yarn@4.5.0",
   "workspaces": [
@@ -13,7 +13,8 @@
     "lint": "yarn workspaces foreach --all --exclude 'example-*' run lint",
     "typecheck:examples": "yarn workspaces foreach --all --include 'example-*' run typecheck",
     "test": "yarn workspaces foreach --all --exclude 'example-*' run test",
-    "test:coverage": "yarn workspaces foreach --all --exclude 'example-*' run test:coverage"
+    "test:coverage": "yarn workspaces foreach --all --exclude 'example-*' run test:coverage",
+    "docs": "yarn workspaces foreach --all --exclude 'example-*' run docs"
   },
   "resolutions": {
     "@types/react": "^18.3.0",
@@ -34,6 +35,7 @@
     "rollup": "^4.18.0",
     "rollup-plugin-dts": "^6.1.1",
     "tslib": "^2.6.3",
+    "typedoc": "^0.28.18",
     "typescript": "^5.4.0",
     "yup": "^1.4.0"
   },

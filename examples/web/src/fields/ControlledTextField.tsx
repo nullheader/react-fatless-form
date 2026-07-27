@@ -43,7 +43,9 @@ export default function ControlledTextField<
       onFocus={onFocus}
       error={hasError}
       helperText={hasError ? error : undefined}
-      slotProps={{ htmlInput: { ref } }}
+      slotProps={{ 
+        htmlInput: { ref }, 
+        formHelperText: { sx: { marginLeft: 0 } } }}
     />
   )
 }

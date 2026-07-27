@@ -96,20 +96,6 @@ yarn workspace react-fatless-form test              # just core
 yarn workspace react-fatless-form-web test:watch     # just web, watch mode
 ```
 
-A few decisions worth knowing about if you're adding tests:
-
-- **Babel, not `ts-jest`.** Tests are transpiled with `babel-jest` (`@babel/preset-env` + `@babel/preset-typescript` + `@babel/preset-react`), the same as most RTL setups. This sidesteps any friction between Jest's CJS-based module system and these packages' `"type": "module"` - Babel converts test files to CommonJS before Jest's module loader ever sees an `import`/`export`. Type-checking tests is a separate, optional concern (see `tsconfig.test.json` below), not something Jest does.
-- **`web` and `native` tests resolve `react-fatless-form` to core's source, not `dist/`.** Each package's `jest.config.cjs` maps it via `moduleNameMapper`, mirroring the `paths` alias in that package's `tsconfig.test.json`. This means `yarn test` never depends on `yarn build` having run first - and note this is now independent of the main `tsconfig.json`, which resolves `react-fatless-form` through regular `node_modules`/`dist` resolution instead (so `yarn typecheck` here does expect `core` to have been built).
-- **`__tests__/` lives outside `src/`.** Nothing under `include: ["src"]` changes, so the existing `build`/`typecheck` scripts are untouched by adding tests. `tsconfig.test.json` (per package, not used by any script) exists purely so editors get full IntelliSense - including the `react-fatless-form` path alias - inside `__tests__/` too.
-- **`native`'s tests never load real `react-native`.** Its `src/` only ever touches one export from it (`Keyboard.dismiss`, in `useFormSubmit.ts`) - none of its hooks render actual RN components - so tests use a `virtual: true` Jest mock for `react-native` instead of the real package and its RN-specific Babel/Metro preset. Everything else runs through `@testing-library/react`'s `renderHook`, the same as `web` and `core`.
-- **Every package's `react`/`react-dom` devDependency - root, `core`, `web`, and `native` alike - is pinned to the exact same version (`18.2.0`), not a caret range anywhere.** This one is worth understanding fully if you ever touch it, because a partial version of this fix looks like it works (no warnings) while still being broken (tests crash with "Invalid hook call").
-  - `react-native` peer-requires an _exact_ React version to match its bundled reconciler, not a range - currently `18.2.0` for the `0.74.x` line this project uses. `native` depends on `core` as a real `workspace:*` dependency (not just for typechecking), and Yarn treats a workspace's full dependency set - `devDependencies` included - as part of what it provides to dependents. So `core`'s own `react-dom` version rides along into `native`'s (and `examples/native`'s) peer graph too, and since `react-dom` always peer-requires a caret range matching its own version, any newer `react-dom` in `core` collides with `react-native`'s exact pin.
-  - Pinning only `core` and `native` (leaving `web` and root on a newer caret range) clears Yarn's peer-validation warnings, but doesn't fully fix it: Yarn's hoisting is a whole-tree decision, not a pairwise one. As long as _anything_ in the tree still prefers a different version, Yarn has a reason to nest separate, non-hoisted copies of `react` for the packages that can't share the root's preferred version - and which nested copy each package actually lands on isn't guaranteed to be the same physical file, even when their `package.json` entries happen to say the identical version string. Two different physical copies of `react` (as opposed to two different _versions_) means React DOM sets its internal dispatcher on one copy while a hook call resolves `react` from the other - `TypeError: Cannot read properties of null (reading 'useState')`. This surfaced specifically when `web`'s and `native`'s tests imported `core`'s hooks via source (see the `moduleNameMapper` note below): `core`'s nested `react` diverged from whichever `react`/`react-dom` `@testing-library/react` resolved to in that package's own tree. The fix is to remove every disagreement, not just the loudest one - once nothing anywhere in the tree prefers a version other than `18.2.0`, there's no remaining reason for Yarn to fragment the install, and hoisting a single shared copy to the root becomes the only sensible outcome. The root `resolutions` field adds a second, more explicit layer on top of that (`"react-fatless-form/react": "18.2.0"` and the same for the other two packages and `react-dom`), scoped to just these three packages so it doesn't affect `examples/web`'s independent dependencies. Bump all of this only in lockstep with whatever exact React version the `react-native` range in the `native` package resolves to - and after bumping, prefer a full `rm -rf node_modules && yarn install` over an incremental install, since incrementally patching version constraints that used to conflict is exactly the scenario that can leave stale, inconsistent copies behind.
-- **Every field hook is tested at two layers:** the pure `adaptXField` function in isolation (a hand-built `FieldBinding`, no `FormProvider` involved) for precise edge-case coverage, plus `useXField` through a real `useForm()` + `FormProvider` (via each package's `__tests__/test-utils.tsx`) for integration coverage - and for `web`, at least one full DOM round trip per hook (`render` + `fireEvent`/`userEvent` against a real `<input>`/`<select>`).
-Two behaviors the tests turned up that are worth a look, independent of anything test-related:
-- `useNumberField`'s (both `web` and `native`) displayed `value` only special-cases `undefined`, not `null` - `field.value === undefined ? '' : String(field.value)`. Since both adapters' own `onChange`/`onChangeText` commit `null` for a cleared input, clearing the field and re-rendering displays the literal text `"null"` rather than blank.
-- Both `useNumberField` adapters' doc comments list a trailing decimal point (e.g. `'1.'`) alongside a lone `'-'` as "not-yet-parseable" input that gets ignored. In practice `Number('1.')` (native) and `valueAsNumber` for `'1.'` (web, per the HTML spec's own float-parsing algorithm) both evaluate to `1`, so that specific input actually commits rather than being ignored.
-
 ---
 
 ## Examples
@@ -118,6 +104,25 @@ Both examples are the same signup form - first/last name, email, password, agree
 
 - **[web](examples/web)** - [MUI](https://mui.com)
 - **[native](examples/native)** - [React Native Paper](https://callstack.github.io/react-native-paper/) via Expo
+
+---
+
+## Development
+
+Root-level scripts fan out across `packages/*` via `yarn workspaces foreach`
+(examples are excluded from most of these - they're apps, not published
+packages):
+
+| Script | What it does |
+| --- | --- |
+| `yarn typecheck` | `tsc --noEmit` in each package |
+| `yarn typecheck:examples` | same, for `examples/*` - catches the packages' API drifting out from under the example apps |
+| `yarn lint` | `eslint src` in each package |
+| `yarn test` / `yarn test:coverage` | Jest in each package |
+| `yarn build` | Rollup in each package - emits `dist/{index.js,index.cjs,index.d.ts}` |
+| `yarn docs` | [TypeDoc](https://typedoc.org) in each package - emits a browsable API reference into that package's `docs/`, generated straight from the JSDoc on its exports |
+
+CI (`.github/workflows/ci.yml`) runs `typecheck`, `typecheck:examples`, `lint`, `test`, and `build` on Node 22.x and 24.x for every push and pull request to `main`.
 
 ---
 

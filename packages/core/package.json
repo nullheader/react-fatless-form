@@ -1,6 +1,6 @@
 {
   "name": "react-fatless-form",
-  "version": "5.0.2",
+  "version": "5.0.3",
   "description": "Headless, deeply-typed React form state management for web and React Native. Platform-agnostic core - import react-fatless-form-web or react-fatless-form-native for the full field-binding experience, or this package directly to build a custom binding.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -24,6 +24,7 @@
     "postpack": "node ../../scripts/rewrite-readme-links.js restore && rm -f LICENSE",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
+    "docs": "typedoc",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"

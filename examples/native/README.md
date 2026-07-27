@@ -4,6 +4,7 @@ A signup form (first/last name, email, password, agree-to-terms) built with
 [react-fatless-form-native](../../packages/native) and [React Native Paper](https://callstack.github.io/react-native-paper/) via Expo.
 
 Demonstrates:
+
 - `ControlledTextInput` and `ControlledCheckbox` wrapping Paper components - the same pattern for any design system
 - `useTextField`, `useSwitchField`, `useFormSubmit` from `react-fatless-form-native`
 - Why `SignupForm.tsx` splits into `SignupForm` (owns `useForm`/`FormProvider`) and `SignupFormFields` (calls `useFormSubmit`) - see the `useFormSubmit` section in [the native package's README](../../packages/native/README.md) for why that split is required
