@@ -1,0 +1,12 @@
+{
+  // See packages/web/tsconfig.typecheck.json for the full rationale - same
+  // fix, same reason it's a separate file from tsconfig.json rather than an
+  // addition to it.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "react-fatless-form": ["../core/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

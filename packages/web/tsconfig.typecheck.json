@@ -1,0 +1,31 @@
+{
+  // Used ONLY by this package's "typecheck" script - deliberately not
+  // tsconfig.json (which stays untouched and is what @rollup/plugin-typescript
+  // uses for the real build). The two have incompatible needs: tsconfig.json
+  // needs a narrow rootDir so `dist/` correctly mirrors `src/`, but the real
+  // build never actually needs `react-fatless-form` resolved to source - by
+  // the time it runs (within `yarn build`'s topological order), core has
+  // already been built moments earlier in the same run, so normal
+  // node_modules -> core/package.json -> ./dist resolution already works.
+  //
+  // Standalone `tsc --noEmit` gets no such benefit, since it's a separate
+  // script invocation with no ordering relationship to `build`. It needs
+  // `paths` to resolve react-fatless-form straight to core's source instead
+  // - but rootDir is enforced against the FULL expanded program (everything
+  // reached transitively through an import, not just what `include` lists
+  // explicitly), so pairing that `paths` entry with an explicit rootDir
+  // fails with TS6059 the moment core's own internal imports pull in files
+  // outside packages/web/src. Omitting rootDir here lets it be inferred from
+  // the actual file set instead, which - since nothing is ever emitted from
+  // this config (--noEmit) - is always safe.
+  //
+  // Mirrors this package's own jest.config.cjs moduleNameMapper, which
+  // already does the equivalent redirect at test time.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "react-fatless-form": ["../core/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

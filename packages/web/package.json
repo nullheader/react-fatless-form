@@ -1,6 +1,6 @@
 {
   "name": "react-fatless-form-web",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Web (DOM) bindings for react-fatless-form - useTextField, useNumberField, useCheckboxField, and useFormSubmit, each wired for plain HTML elements. Re-exports the entire core API, so this is the only package a web app needs to import from.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -22,7 +22,7 @@
     "build": "rollup -c",
     "prepack": "cp ../../LICENSE ./ && node ../../scripts/rewrite-readme-links.js prepare",
     "postpack": "node ../../scripts/rewrite-readme-links.js restore && rm -f LICENSE",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "lint": "eslint src",
     "docs": "typedoc",
     "test": "jest",

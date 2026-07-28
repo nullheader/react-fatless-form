@@ -14,8 +14,9 @@ module.exports = {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
-    // Mirrors this package's own tsconfig.json `paths` mapping - see
-    // packages/web/jest.config.cjs for the full rationale.
+    // Mirrors this package's own tsconfig.typecheck.json `paths` mapping -
+    // see packages/web/jest.config.cjs and tsconfig.typecheck.json for the
+    // full rationale.
     '^react-fatless-form$': '<rootDir>/../core/src/index.ts',
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
