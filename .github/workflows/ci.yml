@@ -19,23 +19,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Enable Corepack (for the pinned Yarn version)
+        run: corepack enable
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: yarn
 
-      - name: Enable Corepack (for the pinned Yarn version)
-        run: corepack enable
-
-      # --immutable fails the build if yarn.lock would need to change -
-      # yarn.lock is already committed here, so this works as-is (unlike a
-      # fresh project that hasn't run `yarn install` once yet).
       - run: yarn install --immutable
-
-      # Mirrors this repo's own root scripts - packages/* only, examples/*
-      # excluded (they're covered separately by typecheck:examples, and
-      # aren't part of what gets published).
       - run: yarn typecheck
       - run: yarn typecheck:examples
       - run: yarn lint
