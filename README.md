@@ -1,6 +1,6 @@
 # react-fatless-form 🥬
 
-![License](https://img.shields.io/github/license/aderahenry/react-fatless-form) ![core](https://img.shields.io/npm/v/react-fatless-form?label=core) ![web](https://img.shields.io/npm/v/react-fatless-form-web?label=web) ![native](https://img.shields.io/npm/v/react-fatless-form-native?label=native)
+![License](https://img.shields.io/github/license/aderahenry/react-fatless-form) [![CI](https://github.com/oneadera/react-fatless-form/actions/workflows/ci.yml/badge.svg)](https://github.com/oneadera/react-fatless-form/actions/workflows/ci.yml) ![core](https://img.shields.io/npm/v/react-fatless-form?label=core) ![web](https://img.shields.io/npm/v/react-fatless-form-web?label=web) ![native](https://img.shields.io/npm/v/react-fatless-form-native?label=native)
 
 _A headless form library for React and React Native. Lean, typed up the yin-yang, and built to stay out of your way._
 
