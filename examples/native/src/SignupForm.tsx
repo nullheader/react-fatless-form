@@ -68,14 +68,14 @@ function SignupFormFields() {
           name="firstName"
           label="First name"
           returnKeyType="next"
-          submitBehavior="submit"
+          blurOnSubmit={false}
           onSubmitEditing={() => form.setFocus('lastName')}
         />
         <ControlledTextInput<SignupValues>
           name="lastName"
           label="Last name"
           returnKeyType="next"
-          submitBehavior="submit"
+          blurOnSubmit={false}
           onSubmitEditing={() => form.setFocus('email')}
         />
         <ControlledTextInput<SignupValues>
@@ -83,7 +83,7 @@ function SignupFormFields() {
           label="Email"
           keyboardType="email-address"
           returnKeyType="next"
-          submitBehavior="submit"
+          blurOnSubmit={false}
           onSubmitEditing={() => form.setFocus('password')}
         />
         <ControlledTextInput<SignupValues>

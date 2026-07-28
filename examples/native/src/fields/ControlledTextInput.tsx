@@ -1,11 +1,11 @@
 import { View } from 'react-native'
-import { TextInput, HelperText, PaperTextInputProps } from 'react-native-paper'
+import { TextInput, HelperText, TextInputProps } from 'react-native-paper'
 import { useTextField, FormValues, StringFieldPath } from 'react-fatless-form-native'
 
 export interface ControlledTextInputProps<
   TValues extends FormValues,
   TField extends StringFieldPath<TValues>,
-> extends Omit<PaperTextInputProps, 'value' | 'onChangeText' | 'onBlur' | 'onFocus' | 'error' | 'ref'> {
+> extends Omit<TextInputProps, 'value' | 'onChangeText' | 'onBlur' | 'onFocus' | 'error' | 'ref'> {
   name: TField
 }
 

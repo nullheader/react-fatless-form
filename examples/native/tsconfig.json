@@ -3,7 +3,6 @@
   "compilerOptions": {
     "noEmit": true,
     "lib": ["ES2020", "DOM"],
-    "baseUrl": ".",
     "paths": {
       "react-fatless-form-native": ["../../packages/native/src/index.ts"],
       "react-fatless-form": ["../../packages/core/src/index.ts"]
