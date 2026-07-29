@@ -16,14 +16,14 @@ import {
  * "select all that apply" pattern where multiple checkboxes share one form
  * field whose value is the array of selected option strings.
  *
+ * Unlike sibling `Web*FieldProps` types, this one isn't parameterized by
+ * `TField` - `checked`/`onChange` are always `boolean`/an event handler
+ * regardless of which field or item they're bound to, so there's nothing
+ * for a field-path type parameter to do here.
+ *
  * @typeParam TValues - Your form's values shape.
- * @typeParam TField - The dot-path of the `string[]`-typed group field, e.g.
- * `'preferences'` for `interface FormValues { preferences: string[] }`.
  */
-export interface WebCheckboxGroupItemProps<
-  TValues extends FormValues,
-  TField extends StringArrayFieldPath<TValues>,
-> {
+export interface WebCheckboxGroupItemProps {
   /** Whether this specific item's value is currently in the group's array. */
   checked: boolean
   /** Wire to `<input type="checkbox" onChange={onChange} />`. Toggles this item in/out of the array. */
@@ -43,7 +43,7 @@ export function adaptCheckboxGroupItem<
 >(
   field: FieldBinding<TValues, TField>,
   itemValue: string,
-): WebCheckboxGroupItemProps<TValues, TField> {
+): WebCheckboxGroupItemProps {
   // Same conditional-type limitation as in useMultiSelectField / useFileField:
   // TypeScript can't reduce FieldValue<TValues, TField> to readonly string[]
   // in a generic body even though StringArrayFieldPath guarantees it.
@@ -117,6 +117,6 @@ export function adaptCheckboxGroupItem<
 export function useCheckboxGroupItem<
   TValues extends FormValues = FormValues,
   TField extends StringArrayFieldPath<TValues> = StringArrayFieldPath<TValues>,
->(name: TField, itemValue: string): WebCheckboxGroupItemProps<TValues, TField> {
+>(name: TField, itemValue: string): WebCheckboxGroupItemProps {
   return adaptCheckboxGroupItem(useField<TValues, TField>(name), itemValue)
 }

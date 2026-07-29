@@ -34,11 +34,14 @@ export type FormSubmissionStatus = 'idle' | 'submitting' | 'success' | 'error'
  * })
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional: an
-// `any`-valued index signature is what lets plain `interface` declarations (not
-// just `type` aliases) satisfy `TValues extends FormValues` everywhere below.
-// `Record<string, unknown>` looks safer but silently rejects every interface a
-// consumer is likely to write for their form's value shape.
+// `any`-valued index signature is what lets plain `interface` declarations
+// (not just `type` aliases) satisfy `TValues extends FormValues` everywhere
+// below. `Record<string, unknown>` looks safer but silently rejects every
+// interface a consumer is likely to write for their form's value shape:
+// TypeScript only recognizes an implicit index signature on object-literal
+// *types*, never on `interface` declarations, and `any` is the one index
+// signature value type exempted from that check.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- see comment above
 export type FormValues = Record<string, any>
 
 /**
