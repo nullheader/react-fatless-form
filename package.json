@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "5.0.4",
+  "version": "5.1.0",
   "description": "Monorepo for react-fatless-form, react-fatless-form-web, react-fatless-form-native, and their examples.",
   "packageManager": "yarn@4.5.0",
   "workspaces": [
