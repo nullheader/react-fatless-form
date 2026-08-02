@@ -177,6 +177,20 @@ const { value, error, touched, dirty, setValue, setTouched, onBlur, onFocus, ref
 <button disabled={!form.isDirty}>Save changes</button>
 ```
 
+### `getDirtyValues(form, options?)`
+
+Extracts only the fields that have changed from their initial values - the shape you actually want for a PATCH request body, instead of re-sending a whole form's worth of values the server already has. Reads `form.dirty` and `form.getValues()` directly, so pass your `useForm()` result straight in.
+
+A change under an array is always returned as the *whole* array, never a sparse per-index patch - so a change to `tags.1` or `users.0.firstName` pulls back the entire `tags`/`users` array, not `{ tags: { 1: '...' } }`.
+
+```tsx
+const onSubmit = (values: ProfileValues) =>
+  api.patch(`/users/${id}`, getDirtyValues(form))
+
+// Flat, dot-notated keys instead of a nested object:
+getDirtyValues(form, { flat: true }) // { 'address.street': '...' }
+```
+
 ### `handleSubmit(form, resolver, onSubmit, config?)`
 
 Validates, then calls `onSubmit`. Tracks status (`idle` → `submitting` → `success`/`error`) automatically. Touches all invalid fields on failure so errors are immediately visible.
