@@ -64,6 +64,22 @@ export type FormTouched<TValues extends FormValues> = Partial<
   Record<FieldPath<TValues>, boolean>
 >
 
+/**
+ * Which fields currently differ from their initial values, keyed by field
+ * path (see {@link FieldPath}). A field that isn't a key here (or is
+ * explicitly `false`) is considered pristine. `useForm` computes this
+ * incrementally as each field is set - comparing just the field(s) that
+ * changed against `initialValues` - rather than diffing the entire form on
+ * every render, which is what makes {@link UseFormReturn.isDirty} cheap to
+ * read from a component body. Most consumers want that derived boolean
+ * rather than this map directly; reach for the map itself when you need to
+ * know *which* fields changed, e.g. to only PATCH modified fields to a
+ * server.
+ */
+export type FormDirty<TValues extends FormValues> = Partial<
+  Record<FieldPath<TValues>, boolean>
+>
+
 // Leaf types that FieldPath/FieldValue should never recurse into, even
 // though they're technically objects. Without this, e.g. `dateOfBirth: Date`
 // would expand into nonsense paths like 'dateOfBirth.getFullYear'.
@@ -313,11 +329,12 @@ export interface Focusable {
   focus(): void
 }
 
-/** The raw state a form is built from: its values, validation errors, and touched fields. */
+/** The raw state a form is built from: its values, validation errors, touched fields, and dirty fields. */
 export interface FormState<TValues extends FormValues> {
   values: TValues
   errors: FormErrors<TValues>
   touched: FormTouched<TValues>
+  dirty: FormDirty<TValues>
 }
 
 /**
@@ -337,6 +354,25 @@ export interface UseFormReturn<
 > extends FormState<TValues> {
   /** Current status of the most recent submission attempt. See {@link FormSubmissionStatus}. */
   submissionStatus: FormSubmissionStatus
+  /**
+   * A flat map of fields that have diverged from their initial values,
+   * keyed by field path. A field that isn't a key here (or is explicitly
+   * `false`) is considered pristine.
+   */
+  dirty: FormDirty<TValues>
+  /**
+   * A derived convenience boolean that returns `true` if any field in the
+   * form has been modified from its initial state. Recomputed from
+   * {@link UseFormReturn.dirty} whenever it changes - reach for this instead
+   * of writing your own `Object.values(form.dirty).some(Boolean)` (or a
+   * deep-equality check against `initialValues`) in your own components.
+   *
+   * @example
+   * ```tsx
+   * <button disabled={!form.isDirty}>Save changes</button>
+   * ```
+   */
+  isDirty: boolean
   /**
    * Synchronous read of the current values, without subscribing the calling
    * component to re-renders. Prefer this over `form.values` inside

@@ -48,6 +48,11 @@ describe('useField', () => {
     expect(result.current.touched).toBeUndefined()
   })
 
+  it('has no dirty state initially', () => {
+    const { result } = renderWithForm(() => useField<SignupValues>('email'), initialValues)
+    expect(result.current.dirty).toBeUndefined()
+  })
+
   it('picks up an error set on the form', () => {
     const { result, form } = renderWithForm(() => useField<SignupValues>('email'), initialValues)
 
@@ -66,6 +71,29 @@ describe('useField', () => {
     })
 
     expect(result.current.touched).toBe(true)
+  })
+
+  it('picks up dirty state once the field diverges from its initial value', () => {
+    const { result } = renderWithForm(() => useField<SignupValues>('email'), initialValues)
+
+    act(() => {
+      result.current.setValue('a@b.com')
+    })
+
+    expect(result.current.dirty).toBe(true)
+  })
+
+  it('setValue only marks its own field dirty', () => {
+    const { result: emailResult, form } = renderWithForm(
+      () => useField<SignupValues>('email'),
+      initialValues,
+    )
+
+    act(() => {
+      emailResult.current.setValue('a@b.com')
+    })
+
+    expect(form.current.dirty.remember).toBeUndefined()
   })
 
   it('setValue updates the value through the form and is reflected back', () => {

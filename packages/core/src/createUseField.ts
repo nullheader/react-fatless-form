@@ -13,9 +13,9 @@ import { get } from './utils'
 
 /**
  * Everything a single input needs to render and update one field: the
- * current value, its error/touched state, and the handlers to wire into
- * whatever input component you're using. Returned by {@link useField} (or
- * a hook built with {@link createUseField}).
+ * current value, its error/touched/dirty state, and the handlers to wire
+ * into whatever input component you're using. Returned by {@link useField}
+ * (or a hook built with {@link createUseField}).
  *
  * @example
  * ```tsx
@@ -52,6 +52,12 @@ export interface FieldBinding<
   error: string | undefined
   /** Whether the field has been touched. See {@link FormTouched}. */
   touched: boolean | undefined
+  /**
+   * Whether the field's current value differs from its initial value. See
+   * {@link FormDirty}. Useful for styling modified inputs, or deciding
+   * whether a specific field alone should trigger a save action.
+   */
+  dirty: boolean | undefined
   /**
    * Updates the field's value. Accepts the field's real type or a raw
    * {@link PlatformFieldValue} straight from a UI event.
@@ -95,6 +101,7 @@ function useFieldBinding<
   const value = get(form.values, name)
   const error = form.errors[name]
   const touched = form.touched[name]
+  const dirty = form.dirty[name]
 
   const setValue = useCallback(
     (nextValue: FieldValue<TValues, TField> | PlatformFieldValue) => {
@@ -125,7 +132,7 @@ function useFieldBinding<
     [form, name],
   )
 
-  return { name, value, error, touched, setValue, setTouched, onBlur, onFocus, ref }
+  return { name, value, error, touched, dirty, setValue, setTouched, onBlur, onFocus, ref }
 }
 
 /**

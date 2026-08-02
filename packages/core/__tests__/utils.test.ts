@@ -7,7 +7,7 @@
  * precise coverage of edge cases that would be tedious (and less clear on
  * failure) to exercise only indirectly through `useForm`.
  */
-import { get, normalizePath, set } from '../src/utils'
+import { get, isEqual, normalizePath, set } from '../src/utils'
 
 describe('normalizePath', () => {
   it('converts a single bracket index to dot notation', () => {
@@ -187,5 +187,113 @@ describe('set', () => {
     expect(set({}, 'groups.0.members.0.name', 'Carol')).toEqual({
       groups: [{ members: [{ name: 'Carol' }] }],
     })
+  })
+})
+
+describe('isEqual', () => {
+  it('treats identical primitives as equal', () => {
+    expect(isEqual('a@b.com', 'a@b.com')).toBe(true)
+    expect(isEqual(42, 42)).toBe(true)
+    expect(isEqual(true, true)).toBe(true)
+    expect(isEqual(null, null)).toBe(true)
+    expect(isEqual(undefined, undefined)).toBe(true)
+  })
+
+  it('treats different primitives as unequal', () => {
+    expect(isEqual('a', 'b')).toBe(false)
+    expect(isEqual(1, 2)).toBe(false)
+    expect(isEqual(true, false)).toBe(false)
+    expect(isEqual(null, undefined)).toBe(false)
+    expect(isEqual(0, false)).toBe(false)
+  })
+
+  it('treats NaN as equal to itself', () => {
+    // Object.is semantics, not ===, so a field cleared to NaN and reset
+    // back to NaN doesn't get stuck permanently "dirty".
+    expect(isEqual(NaN, NaN)).toBe(true)
+  })
+
+  it('treats two Dates with the same time as equal, regardless of instance', () => {
+    const a = new Date('2024-01-01T00:00:00.000Z')
+    const b = new Date('2024-01-01T00:00:00.000Z')
+    expect(a).not.toBe(b)
+    expect(isEqual(a, b)).toBe(true)
+  })
+
+  it('treats two Dates with different times as unequal', () => {
+    const a = new Date('2024-01-01T00:00:00.000Z')
+    const b = new Date('2024-01-02T00:00:00.000Z')
+    expect(isEqual(a, b)).toBe(false)
+  })
+
+  it('treats arrays with the same elements in the same order as equal, regardless of reference', () => {
+    expect(isEqual(['a', 'b', 'c'], ['a', 'b', 'c'])).toBe(true)
+  })
+
+  it('treats arrays with the same elements in a different order as unequal', () => {
+    expect(isEqual(['a', 'b'], ['b', 'a'])).toBe(false)
+  })
+
+  it('treats arrays of different lengths as unequal', () => {
+    expect(isEqual(['a', 'b'], ['a'])).toBe(false)
+  })
+
+  it('recurses into nested arrays', () => {
+    expect(
+      isEqual(
+        [
+          ['a', 'b'],
+          ['c', 'd'],
+        ],
+        [
+          ['a', 'b'],
+          ['c', 'd'],
+        ],
+      ),
+    ).toBe(true)
+  })
+
+  it('treats plain objects with the same keys/values as equal, regardless of reference or key order', () => {
+    expect(isEqual({ street: 'Main St', city: 'Nairobi' }, { city: 'Nairobi', street: 'Main St' })).toBe(
+      true,
+    )
+  })
+
+  it('treats objects with a different value at one key as unequal', () => {
+    expect(isEqual({ street: 'Main St' }, { street: 'Other St' })).toBe(false)
+  })
+
+  it('treats objects with different key sets as unequal, even with the same number of keys', () => {
+    expect(isEqual({ a: 1 }, { b: 1 })).toBe(false)
+  })
+
+  it('treats an object with an extra key as unequal to a subset of itself', () => {
+    expect(isEqual({ a: 1, b: 2 }, { a: 1 })).toBe(false)
+  })
+
+  it('recurses through nested objects and arrays together', () => {
+    const address = { street: 'Main St', tags: ['home', 'primary'] }
+    expect(isEqual({ address }, { address: { street: 'Main St', tags: ['home', 'primary'] } })).toBe(
+      true,
+    )
+  })
+
+  it('treats an array and a plain object as unequal even with overlapping shape', () => {
+    expect(isEqual(['a'], { 0: 'a' })).toBe(false)
+  })
+
+  it('falls back to reference equality for File-like/class instances rather than inspecting their contents', () => {
+    class Money {
+      constructor(public cents: number) {}
+    }
+    const a = new Money(100)
+    const b = new Money(100)
+
+    // Byte-for-byte "equal" by any structural measure, but isEqual
+    // deliberately doesn't recurse into class instances (see the File
+    // rationale in the isEqual doc comment) - only reference equality
+    // counts here.
+    expect(isEqual(a, a)).toBe(true)
+    expect(isEqual(a, b)).toBe(false)
   })
 })

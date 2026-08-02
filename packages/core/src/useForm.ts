@@ -6,6 +6,7 @@ import {
   FieldPath,
   FieldValue,
   Focusable,
+  FormDirty,
   FormState,
   FormSubmissionStatus,
   FormValues,
@@ -13,12 +14,12 @@ import {
   UseFormReturn,
   ValidationResolver,
 } from './types'
-import { set } from './utils'
+import { get, isEqual, set } from './utils'
 
 /**
- * Creates and owns a form's state: values, errors, touched fields, and
- * submission status, plus every action to read or mutate them. This is the
- * starting point for using this package - pass the result to
+ * Creates and owns a form's state: values, errors, touched fields, dirty
+ * fields, and submission status, plus every action to read or mutate them.
+ * This is the starting point for using this package - pass the result to
  * {@link FormProvider} so descendant fields can reach it via
  * {@link useFormContext} / {@link useField}, and to {@link handleSubmit} to
  * wire up validation and submission.
@@ -62,23 +63,40 @@ export function useForm<TValues extends FormValues>(
       value: FieldValue<TValues, TField> | PlatformFieldValue,
     ) => {
       valuesRef.current = set(valuesRef.current, field, value)
+      const fieldIsDirty = !isEqual(value, get(initialValues, field))
 
       setState((previous: FormState<TValues>) => ({
         ...previous,
         values: valuesRef.current,
+        dirty: { ...previous.dirty, [field]: fieldIsDirty },
       }))
     },
-    [],
+    [initialValues],
   )
 
-  const batchSetFieldValues = useCallback((values: Partial<TValues>) => {
-    valuesRef.current = { ...valuesRef.current, ...values }
+  const batchSetFieldValues = useCallback(
+    (values: Partial<TValues>) => {
+      valuesRef.current = { ...valuesRef.current, ...values }
 
-    setState((previous: FormState<TValues>) => ({
-      ...previous,
-      values: valuesRef.current,
-    }))
-  }, [])
+      setState((previous: FormState<TValues>) => {
+        const nextDirty: FormDirty<TValues> = { ...previous.dirty }
+        // `values` only ever carries top-level keys (see the doc comment on
+        // `UseFormReturn.batchSetFieldValues`), and every top-level key of
+        // TValues is itself a valid FieldPath - same reasoning as the cast
+        // in handleSubmit.ts.
+        for (const field of Object.keys(values) as FieldPath<TValues>[]) {
+          nextDirty[field] = !isEqual(get(values, field), get(initialValues, field))
+        }
+
+        return {
+          ...previous,
+          values: valuesRef.current,
+          dirty: nextDirty,
+        }
+      })
+    },
+    [initialValues],
+  )
 
   const setFieldArrayValue = useCallback(
     <TField extends FieldPath<TValues>>(
@@ -86,13 +104,15 @@ export function useForm<TValues extends FormValues>(
       value: ArrayFieldValue<TValues, TField>,
     ) => {
       valuesRef.current = set(valuesRef.current, field, value)
+      const fieldIsDirty = !isEqual(value, get(initialValues, field))
 
       setState((previous: FormState<TValues>) => ({
         ...previous,
         values: valuesRef.current,
+        dirty: { ...previous.dirty, [field]: fieldIsDirty },
       }))
     },
-    [],
+    [initialValues],
   )
 
   const setFieldError = useCallback(
@@ -160,10 +180,17 @@ export function useForm<TValues extends FormValues>(
     setSubmissionStatus('idle')
   }, [])
 
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    // Cheap on purpose: proportional to the number of fields ever set, not
+    // to the size of the form's values - the whole point of tracking dirty
+    // state incrementally in `state.dirty` rather than deep-comparing
+    // `values` against `initialValues` here on every render.
+    const isDirty = Object.values(state.dirty).some(Boolean)
+
+    return {
       ...state,
       submissionStatus,
+      isDirty,
       getValues,
       setFieldValue,
       batchSetFieldValues,
@@ -176,22 +203,21 @@ export function useForm<TValues extends FormValues>(
       resetSubmissionStatus,
       registerFieldRef,
       setFocus,
-    }),
-    [
-      state,
-      submissionStatus,
-      getValues,
-      setFieldValue,
-      batchSetFieldValues,
-      setFieldArrayValue,
-      setFieldError,
-      setFieldTouched,
-      validate,
-      resetForm,
-      updateSubmissionStatus,
-      resetSubmissionStatus,
-      registerFieldRef,
-      setFocus,
-    ],
-  )
+    }
+  }, [
+    state,
+    submissionStatus,
+    getValues,
+    setFieldValue,
+    batchSetFieldValues,
+    setFieldArrayValue,
+    setFieldError,
+    setFieldTouched,
+    validate,
+    resetForm,
+    updateSubmissionStatus,
+    resetSubmissionStatus,
+    registerFieldRef,
+    setFocus,
+  ])
 }

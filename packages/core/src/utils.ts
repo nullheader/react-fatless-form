@@ -42,6 +42,66 @@ export function get(obj: unknown, path: string, defaultValue?: unknown): unknown
 }
 
 /**
+ * Structural equality for two field values - used internally by `useForm`'s
+ * dirty tracking to decide whether a field has diverged from its initial
+ * value. Recurses into plain objects and arrays (the only shapes `get`/`set`
+ * themselves ever produce while walking a path) and compares `Date`s by
+ * their time value. Everything else - `File`, `Blob`, `Map`, `Set`,
+ * `RegExp`, class instances, functions - falls back to `Object.is`, the
+ * same leaf boundary {@link FieldPath} itself already draws (see the
+ * `Primitive` type above it). That fallback is deliberate, not a gap: a
+ * freshly-picked `File`, for instance, should register as dirty even when
+ * its contents happen to be byte-identical to the one it replaced, and
+ * there's no cheap, correct way to compare those contents regardless.
+ *
+ * This is deliberately not a general-purpose deep-equal utility (and isn't
+ * exported from the package) - it only ever needs to compare one field's
+ * value against its initial counterpart, at the moment that one field
+ * changes. That's a fundamentally cheaper job than re-diffing an entire
+ * form's values on every render, which is the cost `lodash.isEqual(values,
+ * initialValues)` would otherwise impose on every consumer building this
+ * same "is anything dirty" check themselves in the UI layer.
+ */
+export function isEqual(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true
+
+  if (a instanceof Date && b instanceof Date) {
+    return a.getTime() === b.getTime()
+  }
+
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item: unknown, index) => isEqual(item, b[index]))
+  }
+
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const keysA = Object.keys(a)
+    const keysB = Object.keys(b)
+    return (
+      keysA.length === keysB.length &&
+      keysA.every(
+        (key) => Object.prototype.hasOwnProperty.call(b, key) && isEqual(a[key], b[key]),
+      )
+    )
+  }
+
+  return false
+}
+
+/**
+ * True for plain data objects - object literals, or objects created with
+ * `Object.create(null)` - and false for everything else {@link isEqual}
+ * treats as a leaf instead of recursing into: arrays (handled by their own
+ * branch above), `Date`, `Map`, `Set`, `RegExp`, `File`/`Blob`, and class
+ * instances generally. All of those have a prototype other than
+ * `Object.prototype`, which is what this checks.
+ */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) return false
+  const proto: unknown = Object.getPrototypeOf(value)
+  return proto === Object.prototype || proto === null
+}
+
+/**
  * Immutably sets a deeply nested value in an object using a dot-notated string path.
  * This ensures React detects state changes correctly.
  */

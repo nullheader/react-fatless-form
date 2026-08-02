@@ -4,7 +4,7 @@ export type { FieldBinding } from './createUseField'
 export { FormProvider, useFormContext, useFormProvider } from './FormProvider'
 export { handleSubmit } from './handleSubmit'
 export type { HandleSubmitConfig } from './handleSubmit'
-export { createEmptyErrors, createEmptyTouched, createFormState } from './state'
+export { createEmptyDirty, createEmptyErrors, createEmptyTouched, createFormState } from './state'
 export type {
   ArrayFieldValue,
   BooleanFieldPath,
@@ -14,6 +14,7 @@ export type {
   PlatformFieldValue,
   FieldValue,
   FormContextApi,
+  FormDirty,
   FormErrors,
   FormState,
   FormSubmissionStatus,

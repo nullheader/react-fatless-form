@@ -37,6 +37,16 @@ describe('useForm - initial state', () => {
     expect(result.current.touched).toEqual({})
   })
 
+  it('starts with no dirty fields', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+    expect(result.current.dirty).toEqual({})
+  })
+
+  it('starts with isDirty false', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+    expect(result.current.isDirty).toBe(false)
+  })
+
   it('starts with an idle submission status', () => {
     const { result } = renderHook(() => useForm(initialValues))
     expect(result.current.submissionStatus).toBe('idle')
@@ -121,6 +131,59 @@ describe('useForm - setFieldValue', () => {
 
     expect(result.current.values.tags).toEqual(['first-tag'])
   })
+
+  it('marks a field dirty once its value differs from the initial value', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+
+    act(() => {
+      result.current.setFieldValue('email', 'a@b.com')
+    })
+
+    expect(result.current.dirty.email).toBe(true)
+  })
+
+  it('does not mark a field dirty when set to the same value it already had', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+
+    act(() => {
+      result.current.setFieldValue('email', initialValues.email)
+    })
+
+    expect(result.current.dirty.email).toBe(false)
+  })
+
+  it('un-marks a field dirty once its value is changed back to the initial value', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+
+    act(() => {
+      result.current.setFieldValue('email', 'a@b.com')
+    })
+    act(() => {
+      result.current.setFieldValue('email', initialValues.email)
+    })
+
+    expect(result.current.dirty.email).toBe(false)
+  })
+
+  it('tracks a nested field as dirty under its own dot path', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+
+    act(() => {
+      result.current.setFieldValue('address.street', '123 Main St')
+    })
+
+    expect(result.current.dirty['address.street']).toBe(true)
+  })
+
+  it('leaves sibling fields dirty state untouched', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+
+    act(() => {
+      result.current.setFieldValue('email', 'a@b.com')
+    })
+
+    expect(result.current.dirty.password).toBeUndefined()
+  })
 })
 
 describe('useForm - batchSetFieldValues', () => {
@@ -160,6 +223,41 @@ describe('useForm - batchSetFieldValues', () => {
 
     expect(result.current.values.address).toEqual({ street: '5th Ave', city: '' })
   })
+
+  it('marks only the keys included in the partial update as dirty', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+
+    act(() => {
+      result.current.batchSetFieldValues({ email: 'a@b.com', password: 'hunter2' })
+    })
+
+    expect(result.current.dirty.email).toBe(true)
+    expect(result.current.dirty.password).toBe(true)
+    expect(result.current.dirty.remember).toBeUndefined()
+  })
+
+  it('does not mark a batched key dirty when its value matches the initial value', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+
+    act(() => {
+      result.current.batchSetFieldValues({ email: initialValues.email })
+    })
+
+    expect(result.current.dirty.email).toBe(false)
+  })
+
+  it('accumulates dirty state across multiple batched updates rather than replacing it', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+
+    act(() => {
+      result.current.batchSetFieldValues({ email: 'a@b.com' })
+    })
+    act(() => {
+      result.current.batchSetFieldValues({ password: 'hunter2' })
+    })
+
+    expect(result.current.dirty).toEqual({ email: true, password: true })
+  })
 })
 
 describe('useForm - setFieldArrayValue', () => {
@@ -184,6 +282,89 @@ describe('useForm - setFieldArrayValue', () => {
     })
 
     expect(result.current.values.email).toBe('a@b.com')
+  })
+
+  it('marks the field dirty when the array contents actually differ from the initial value', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+
+    act(() => {
+      result.current.setFieldArrayValue('tags', ['a', 'b'])
+    })
+
+    expect(result.current.dirty.tags).toBe(true)
+  })
+
+  it('does not mark the field dirty when set to a new array reference with equal contents', () => {
+    const values = { ...initialValues, tags: ['a', 'b'] }
+    const { result } = renderHook(() => useForm(values))
+
+    act(() => {
+      // Same contents as the initial array, but deliberately a fresh array
+      // reference (e.g. from a reorder-and-undo) - dirty tracking compares
+      // by value, not by reference, so this should stay pristine.
+      result.current.setFieldArrayValue('tags', ['a', 'b'])
+    })
+
+    expect(result.current.dirty.tags).toBe(false)
+  })
+})
+
+describe('useForm - isDirty', () => {
+  it('is false when nothing has changed', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+    expect(result.current.isDirty).toBe(false)
+  })
+
+  it('becomes true once any field differs from its initial value', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+
+    act(() => {
+      result.current.setFieldValue('email', 'a@b.com')
+    })
+
+    expect(result.current.isDirty).toBe(true)
+  })
+
+  it('becomes false again once the only changed field is reverted', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+
+    act(() => {
+      result.current.setFieldValue('email', 'a@b.com')
+    })
+    act(() => {
+      result.current.setFieldValue('email', initialValues.email)
+    })
+
+    expect(result.current.isDirty).toBe(false)
+  })
+
+  it('stays true if one of several changed fields is reverted while another remains changed', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+
+    act(() => {
+      result.current.setFieldValue('email', 'a@b.com')
+    })
+    act(() => {
+      result.current.setFieldValue('password', 'hunter2')
+    })
+    act(() => {
+      result.current.setFieldValue('email', initialValues.email)
+    })
+
+    expect(result.current.isDirty).toBe(true)
+  })
+
+  it('is unaffected by touched or error state - only values matter', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+
+    act(() => {
+      result.current.setFieldTouched('email', true)
+    })
+    act(() => {
+      result.current.setFieldError('email', 'Invalid email')
+    })
+
+    expect(result.current.isDirty).toBe(false)
   })
 })
 
@@ -361,6 +542,20 @@ describe('useForm - resetForm', () => {
     })
 
     expect(result.current.touched).toEqual({})
+  })
+
+  it('clears dirty state', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+
+    act(() => {
+      result.current.setFieldValue('email', 'a@b.com')
+    })
+    act(() => {
+      result.current.resetForm()
+    })
+
+    expect(result.current.dirty).toEqual({})
+    expect(result.current.isDirty).toBe(false)
   })
 
   it('does NOT reset submissionStatus - that is a separate concern', () => {

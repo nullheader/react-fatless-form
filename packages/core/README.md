@@ -2,7 +2,7 @@
 
 ![License](https://img.shields.io/github/license/aderahenry/react-fatless-form) ![npm version](https://img.shields.io/npm/v/react-fatless-form) ![bundle size](https://img.shields.io/bundlephobia/minzip/react-fatless-form)
 
-Headless, deeply-typed React form state management. Zero DOM/RN knowledge - manages values, validation errors, touched state, and submission lifecycle, then gives you everything you need to bind that state to whatever UI you're rendering.
+Headless, deeply-typed React form state management. Zero DOM/RN knowledge - manages values, validation errors, touched state, dirty state, and submission lifecycle, then gives you everything you need to bind that state to whatever UI you're rendering.
 
 You'll usually want one of the platform packages built on top of this one instead of importing it directly:
 
@@ -163,10 +163,18 @@ const form = useFormContext<SignupValues>()
 
 ### `useField<TValues>(name)`
 
-Binds a single field - including nested paths like `'address.street'` - to the form in context. Returns the raw platform-agnostic binding: value, error, touched, setters, `onBlur`, `onFocus`, and `ref` (for `form.setFocus`).
+Binds a single field - including nested paths like `'address.street'` - to the form in context. Returns the raw platform-agnostic binding: value, error, touched, dirty, setters, `onBlur`, `onFocus`, and `ref` (for `form.setFocus`).
 
 ```tsx
-const { value, error, touched, setValue, setTouched, onBlur, onFocus, ref } = useField<SignupValues>('email')
+const { value, error, touched, dirty, setValue, setTouched, onBlur, onFocus, ref } = useField<SignupValues>('email')
+```
+
+### `form.dirty` / `form.isDirty`
+
+`form.dirty` is a flat map of fields that currently differ from their initial values, keyed by field path - computed incrementally as each field changes, not by deep-comparing the whole form. `form.isDirty` is the derived whole-form convenience boolean: `true` if any field has changed.
+
+```tsx
+<button disabled={!form.isDirty}>Save changes</button>
 ```
 
 ### `handleSubmit(form, resolver, onSubmit, config?)`

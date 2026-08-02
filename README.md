@@ -70,7 +70,7 @@ npm install react-fatless-form
 
 ## Why split this way
 
-`react-fatless-form` (core) owns values, validation, errors, and touched state, and knows nothing about `HTMLInputElement` or React Native's `TextInput`. `web` and `native` each add a thin layer that unwraps their platform's event shape (`event.target.value` vs. a plain string from `onChangeText`) into what core expects. Neither platform package imports the other, and core never imports either.
+`react-fatless-form` (core) owns values, validation, errors, touched state, and dirty state, and knows nothing about `HTMLInputElement` or React Native's `TextInput`. `web` and `native` each add a thin layer that unwraps their platform's event shape (`event.target.value` vs. a plain string from `onChangeText`) into what core expects. Neither platform package imports the other, and core never imports either.
 
 The payoff: validation logic, the field-path type system, and the submission lifecycle are written and tested exactly once. A new platform binding only has to write the event-unwrapping layer.
 
