@@ -1,6 +1,6 @@
 {
   "name": "react-fatless-form",
-  "version": "5.0.4",
+  "version": "5.1.0",
   "description": "Headless, deeply-typed React form state management for web and React Native. Platform-agnostic core - import react-fatless-form-web or react-fatless-form-native for the full field-binding experience, or this package directly to build a custom binding.",
   "type": "module",
   "main": "./dist/index.cjs",
