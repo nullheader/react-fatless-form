@@ -1,6 +1,6 @@
 {
   "name": "react-fatless-form-web",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Web (DOM) bindings for react-fatless-form - useTextField, useNumberField, useCheckboxField, and useFormSubmit, each wired for plain HTML elements. Re-exports the entire core API, so this is the only package a web app needs to import from.",
   "type": "module",
   "main": "./dist/index.cjs",

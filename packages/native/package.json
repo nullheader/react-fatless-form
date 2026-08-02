@@ -1,6 +1,6 @@
 {
   "name": "react-fatless-form-native",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "React Native bindings for react-fatless-form - useTextField, useNumberField, useSwitchField, and useFormSubmit, each wired for RN's built-in components. Re-exports the entire core API, so this is the only package a native app needs to import from.",
   "type": "module",
   "main": "./dist/index.cjs",
