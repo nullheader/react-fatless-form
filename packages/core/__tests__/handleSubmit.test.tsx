@@ -157,6 +157,26 @@ describe('handleSubmit - successful submission', () => {
     expect(form.current.values).toEqual(values)
   })
 
+  it('default reset reverts to the ORIGINAL initial values, not the submitted ones, when they differ', async () => {
+    // Distinct from the test above: here the form is actually edited away
+    // from its initial values before submitting, so a default reset
+    // (reverting to initialValues) and a 'submitted' reset (keeping the
+    // submitted values) would produce two different, observable results -
+    // this is what actually pins down which one `true` means.
+    const { result: form } = setupForm(initialValues)
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+
+    act(() => {
+      form.current.setFieldValue('email', 'edited@b.com')
+    })
+    await act(async () => {
+      await handleSubmit(form.current, alwaysValid, onSubmit)
+    })
+
+    expect(form.current.values).toEqual(initialValues)
+    expect(form.current.isDirty).toBe(false)
+  })
+
   it('does not reset the form when resetOnSuccess is false', async () => {
     const values = { email: 'a@b.com', password: 'hunter2' }
     const { result: form } = setupForm(values)
@@ -167,6 +187,67 @@ describe('handleSubmit - successful submission', () => {
     })
 
     expect(form.current.values).toEqual(values)
+  })
+
+  it('resetOnSuccess: false leaves dirty state untouched too', async () => {
+    const { result: form } = setupForm(initialValues)
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+
+    act(() => {
+      form.current.setFieldValue('email', 'edited@b.com')
+    })
+    await act(async () => {
+      await handleSubmit(form.current, alwaysValid, onSubmit, { resetOnSuccess: false })
+    })
+
+    expect(form.current.isDirty).toBe(true)
+  })
+
+  it("resetOnSuccess: 'submitted' keeps the submitted values instead of reverting to initialValues", async () => {
+    const { result: form } = setupForm(initialValues)
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+
+    act(() => {
+      form.current.setFieldValue('email', 'saved@b.com')
+    })
+    await act(async () => {
+      await handleSubmit(form.current, alwaysValid, onSubmit, { resetOnSuccess: 'submitted' })
+    })
+
+    expect(form.current.values).toEqual({ ...initialValues, email: 'saved@b.com' })
+  })
+
+  it("resetOnSuccess: 'submitted' clears isDirty back to false", async () => {
+    const { result: form } = setupForm(initialValues)
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+
+    act(() => {
+      form.current.setFieldValue('email', 'saved@b.com')
+    })
+    await act(async () => {
+      await handleSubmit(form.current, alwaysValid, onSubmit, { resetOnSuccess: 'submitted' })
+    })
+
+    expect(form.current.dirty).toEqual({})
+    expect(form.current.isDirty).toBe(false)
+  })
+
+  it("resetOnSuccess: 'submitted' establishes the submitted values as the baseline for future edits", async () => {
+    const { result: form } = setupForm(initialValues)
+    const onSubmit = jest.fn().mockResolvedValue(undefined)
+
+    act(() => {
+      form.current.setFieldValue('email', 'saved@b.com')
+    })
+    await act(async () => {
+      await handleSubmit(form.current, alwaysValid, onSubmit, { resetOnSuccess: 'submitted' })
+    })
+    act(() => {
+      // Same value as the new (submitted) baseline - should be pristine.
+      form.current.setFieldValue('email', 'saved@b.com')
+    })
+
+    expect(form.current.isDirty).toBe(false)
   })
 
   it('leaves submissionStatus as success even though the form itself was reset', async () => {

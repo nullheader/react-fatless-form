@@ -558,6 +558,64 @@ describe('useForm - resetForm', () => {
     expect(result.current.isDirty).toBe(false)
   })
 
+  it('re-baselines to newValues when given an argument, instead of the original initialValues', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+    const newValues = { ...initialValues, email: 'saved@b.com' }
+
+    act(() => {
+      result.current.setFieldValue('email', 'draft@b.com')
+    })
+    act(() => {
+      result.current.resetForm(newValues)
+    })
+
+    expect(result.current.values).toEqual(newValues)
+    expect(result.current.dirty).toEqual({})
+    expect(result.current.isDirty).toBe(false)
+  })
+
+  it('computes future dirty state relative to a newValues baseline, not the original initialValues', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+    const newValues = { ...initialValues, email: 'saved@b.com' }
+
+    act(() => {
+      result.current.resetForm(newValues)
+    })
+    act(() => {
+      // Same value as the NEW baseline - should be pristine, even though
+      // it differs from the ORIGINAL initialValues.
+      result.current.setFieldValue('email', 'saved@b.com')
+    })
+
+    expect(result.current.isDirty).toBe(false)
+
+    act(() => {
+      result.current.setFieldValue('email', 'something-else@b.com')
+    })
+
+    expect(result.current.isDirty).toBe(true)
+  })
+
+  it('falls back to the most recently set baseline when called again with no arguments', () => {
+    const { result } = renderHook(() => useForm(initialValues))
+    const newValues = { ...initialValues, email: 'saved@b.com' }
+
+    act(() => {
+      result.current.resetForm(newValues)
+    })
+    act(() => {
+      result.current.setFieldValue('email', 'draft-again@b.com')
+    })
+    act(() => {
+      result.current.resetForm()
+    })
+
+    // Not the ORIGINAL initialValues - the baseline resetForm(newValues)
+    // most recently established.
+    expect(result.current.values).toEqual(newValues)
+    expect(result.current.isDirty).toBe(false)
+  })
+
   it('does NOT reset submissionStatus - that is a separate concern', () => {
     const { result } = renderHook(() => useForm(initialValues))
 
@@ -702,6 +760,39 @@ describe('useForm - callback identity stability', () => {
     })
 
     expect(result.current.setFieldValue).toBe(setFieldValueBefore)
+  })
+
+  it('keeps setFieldValue referentially stable even when initialValues changes reference on a later render', () => {
+    const { result, rerender } = renderHook(({ values }) => useForm(values), {
+      initialProps: { values: initialValues },
+    })
+    const setFieldValueBefore = result.current.setFieldValue
+
+    // Mirrors a parent whose data comes from a cache that just refetched
+    // (e.g. RTK Query / React Query invalidating a tag) - a brand new
+    // object reference for conceptually the same values, arriving via a
+    // normal re-render.
+    rerender({ values: { ...initialValues } })
+
+    expect(result.current.setFieldValue).toBe(setFieldValueBefore)
+  })
+
+  it('does not reset state when initialValues changes reference on a later render', () => {
+    const { result, rerender } = renderHook(({ values }) => useForm(values), {
+      initialProps: { values: initialValues },
+    })
+
+    act(() => {
+      result.current.setFieldValue('email', 'a@b.com')
+    })
+
+    rerender({ values: { ...initialValues } })
+
+    // The hook only reads initialValues once, at mount - a later render
+    // with a new (even if content-identical) reference must never
+    // silently rebase a form the user might be mid-edit on.
+    expect(result.current.values.email).toBe('a@b.com')
+    expect(result.current.isDirty).toBe(true)
   })
 
   it('keeps setFieldTouched referentially stable across unrelated updates', () => {

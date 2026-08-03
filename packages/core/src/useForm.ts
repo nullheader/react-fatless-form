@@ -29,9 +29,14 @@ import { get, isEqual, set } from './utils'
  * what each one does.
  *
  * @typeParam TValues - Your form's value shape.
- * @param initialValues - The form's starting values. Also what `resetForm` resets back to,
- * so prefer a stable reference (e.g. defined outside the component, or memoized) rather than
- * a fresh object literal on every render.
+ * @param initialValues - The form's starting values, read once when the
+ * hook first mounts (the same way `useState`'s lazy initializer would be).
+ * Passing a new object here on a later render - e.g. because it's sourced
+ * from an RTK Query / React Query cache that just refetched - is a no-op;
+ * the hook won't silently rebase a form a user might be mid-edit on top
+ * of. Call `resetForm(newValues)` when you deliberately want to move the
+ * baseline, e.g. after a successful save (see `handleSubmit`'s
+ * `resetOnSuccess: 'submitted'`, which does exactly this for you).
  *
  * @example
  * ```tsx
@@ -55,6 +60,20 @@ export function useForm<TValues extends FormValues>(
   // Maintain a synchronous ref for immediate access without stale closures
   const valuesRef = useRef<TValues>(initialValues)
 
+  // The baseline dirty-tracking compares against. Starts as the values the
+  // hook was first called with, same as `valuesRef` - but unlike
+  // `initialValues` itself (the hook's *own* parameter, only ever read on
+  // the very first render, exactly like useState's lazy initializer and
+  // useRef's initial value both already are), this ref is what lets
+  // `resetForm(newValues)` move the baseline forward later without
+  // depending on `initialValues` changing identity at all. That
+  // decoupling matters: a parent re-rendering with a new `initialValues`
+  // reference - e.g. an RTK Query / React Query cache update after an
+  // unrelated refetch - must never silently rebase a form out from under
+  // a user who's mid-edit. The only way to move this baseline is the
+  // explicit call below.
+  const initialValuesRef = useRef<TValues>(initialValues)
+
   const getValues = useCallback(() => valuesRef.current, [])
 
   const setFieldValue = useCallback(
@@ -63,7 +82,7 @@ export function useForm<TValues extends FormValues>(
       value: FieldValue<TValues, TField> | PlatformFieldValue,
     ) => {
       valuesRef.current = set(valuesRef.current, field, value)
-      const fieldIsDirty = !isEqual(value, get(initialValues, field))
+      const fieldIsDirty = !isEqual(value, get(initialValuesRef.current, field))
 
       setState((previous: FormState<TValues>) => ({
         ...previous,
@@ -71,32 +90,29 @@ export function useForm<TValues extends FormValues>(
         dirty: { ...previous.dirty, [field]: fieldIsDirty },
       }))
     },
-    [initialValues],
+    [],
   )
 
-  const batchSetFieldValues = useCallback(
-    (values: Partial<TValues>) => {
-      valuesRef.current = { ...valuesRef.current, ...values }
+  const batchSetFieldValues = useCallback((values: Partial<TValues>) => {
+    valuesRef.current = { ...valuesRef.current, ...values }
 
-      setState((previous: FormState<TValues>) => {
-        const nextDirty: FormDirty<TValues> = { ...previous.dirty }
-        // `values` only ever carries top-level keys (see the doc comment on
-        // `UseFormReturn.batchSetFieldValues`), and every top-level key of
-        // TValues is itself a valid FieldPath - same reasoning as the cast
-        // in handleSubmit.ts.
-        for (const field of Object.keys(values) as FieldPath<TValues>[]) {
-          nextDirty[field] = !isEqual(get(values, field), get(initialValues, field))
-        }
+    setState((previous: FormState<TValues>) => {
+      const nextDirty: FormDirty<TValues> = { ...previous.dirty }
+      // `values` only ever carries top-level keys (see the doc comment on
+      // `UseFormReturn.batchSetFieldValues`), and every top-level key of
+      // TValues is itself a valid FieldPath - same reasoning as the cast
+      // in handleSubmit.ts.
+      for (const field of Object.keys(values) as FieldPath<TValues>[]) {
+        nextDirty[field] = !isEqual(get(values, field), get(initialValuesRef.current, field))
+      }
 
-        return {
-          ...previous,
-          values: valuesRef.current,
-          dirty: nextDirty,
-        }
-      })
-    },
-    [initialValues],
-  )
+      return {
+        ...previous,
+        values: valuesRef.current,
+        dirty: nextDirty,
+      }
+    })
+  }, [])
 
   const setFieldArrayValue = useCallback(
     <TField extends FieldPath<TValues>>(
@@ -104,7 +120,7 @@ export function useForm<TValues extends FormValues>(
       value: ArrayFieldValue<TValues, TField>,
     ) => {
       valuesRef.current = set(valuesRef.current, field, value)
-      const fieldIsDirty = !isEqual(value, get(initialValues, field))
+      const fieldIsDirty = !isEqual(value, get(initialValuesRef.current, field))
 
       setState((previous: FormState<TValues>) => ({
         ...previous,
@@ -112,7 +128,7 @@ export function useForm<TValues extends FormValues>(
         dirty: { ...previous.dirty, [field]: fieldIsDirty },
       }))
     },
-    [initialValues],
+    [],
   )
 
   const setFieldError = useCallback(
@@ -147,10 +163,12 @@ export function useForm<TValues extends FormValues>(
     return Object.keys(errors).length === 0
   }, [])
 
-  const resetForm = useCallback(() => {
-    valuesRef.current = initialValues
-    setState(createFormState(initialValues))
-  }, [initialValues])
+  const resetForm = useCallback((newValues?: TValues) => {
+    const nextValues = newValues ?? initialValuesRef.current
+    initialValuesRef.current = nextValues
+    valuesRef.current = nextValues
+    setState(createFormState(nextValues))
+  }, [])
 
   // Plain ref, not state: registering/unregistering a field's underlying
   // input is pure imperative bookkeeping that should never itself trigger a

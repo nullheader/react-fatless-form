@@ -438,8 +438,17 @@ export interface UseFormReturn<
    * ```
    */
   validate: (validateFn: ValidationResolver<TValues>) => boolean
-  /** Resets values, errors, and touched state back to the initial values passed to `useForm`. */
-  resetForm: () => void
+  /**
+   * Resets values, errors, touched, and dirty state. With no arguments,
+   * resets back to whatever `useForm` was first called with. Pass
+   * `newValues` to re-baseline to a *different* set of values instead -
+   * e.g. after a successful save, so the just-saved data stays on screen
+   * but the form is considered clean relative to it (see
+   * `handleSubmit`'s `resetOnSuccess: 'submitted'`, which does exactly
+   * this for you). A later no-argument call resets to whichever baseline
+   * was set most recently, not necessarily the original one.
+   */
+  resetForm: (newValues?: TValues) => void
   /** Sets {@link FormSubmissionStatus} directly. `handleSubmit` manages this for you in the normal flow. */
   updateSubmissionStatus: (status: FormSubmissionStatus) => void
   /** Shorthand for `updateSubmissionStatus('idle')`. */

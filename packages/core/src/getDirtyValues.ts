@@ -77,10 +77,10 @@ function arrayRootPath(path: string): string {
  *
  * @example
  * ```tsx
- * const onSubmit = (values: ProfileValues) => {
- *   const changes = getDirtyValues(form) // Partial<ProfileValues>
- *   return api.patch(`/users/${id}`, changes)
- * }
+ * const onSubmit = (values: ProfileValues) =>
+ *   handleSubmit(form, resolver, () => api.patch(`/users/${id}`, getDirtyValues(form)), {
+ *     resetOnSuccess: 'submitted', // clears isDirty; keeps the saved values on screen
+ *   })
  * ```
  *
  * **Arrays are replaced atomically, never merged field-by-field.** If any

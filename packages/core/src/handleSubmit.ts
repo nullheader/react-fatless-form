@@ -13,8 +13,23 @@ export interface HandleSubmitConfig<TResult> {
    * invalid fields touched and return.
    */
   onError?: (error: unknown) => void
-  /** Whether to reset the form back to its initial values after a successful submit. Defaults to `true`. */
-  resetOnSuccess?: boolean
+  /**
+   * Whether (and how) to reset the form after a successful submit.
+   *
+   * - `true` (default): reset back to whatever values `useForm` was first
+   *   called with - the right choice for a one-shot form (signup, a
+   *   contact form) that should clear itself out after submitting.
+   * - `'submitted'`: reset to the values that were just submitted instead
+   *   of the original ones - they stay on screen, but the form becomes
+   *   clean relative to them (`isDirty` goes back to `false`). This is
+   *   the one you want for an edit-and-save form, typically paired with
+   *   `getDirtyValues` for the PATCH body itself. Reaching for `true`
+   *   here by mistake is exactly what makes a saved edit look like it
+   *   silently reverted.
+   * - `false`: don't reset anything - values, errors, touched, and dirty
+   *   state are all left exactly as they were.
+   */
+  resetOnSuccess?: boolean | 'submitted'
 }
 
 /**
@@ -48,6 +63,30 @@ export interface HandleSubmitConfig<TResult> {
  *   )
  * }
  * ```
+ *
+ * An edit form wants the opposite reset behavior - keep the saved values
+ * on screen, don't wipe them back to whatever the form loaded with:
+ *
+ * @example
+ * ```ts
+ * function ProfileForm() {
+ *   const { data } = useGetProfileQuery(userId) // e.g. RTK Query / React Query
+ *   const [updateProfile] = useUpdateProfileMutation()
+ *   const form = useForm<ProfileValues>(data)
+ *
+ *   const onPress = () =>
+ *     handleSubmit(form, resolver, (values) => updateProfile(getDirtyValues(form)), {
+ *       resetOnSuccess: 'submitted', // isDirty -> false; values stay as saved
+ *     })
+ *   // ...
+ * }
+ * ```
+ *
+ * Note that `data` refetching later (e.g. because the mutation invalidated
+ * a cache tag) never touches the form on its own either way - `useForm`
+ * only reads `initialValues` once, at mount. `resetOnSuccess: 'submitted'`
+ * is what actually clears `isDirty` here, immediately, independent of
+ * whenever that refetch happens to resolve.
  */
 export async function handleSubmit<TValues extends FormValues, TResult = void>(
   form: UseFormReturn<TValues>,
@@ -83,7 +122,9 @@ export async function handleSubmit<TValues extends FormValues, TResult = void>(
     const result = await onSubmit(form.values)
     updateSubmissionStatus('success')
 
-    if (config.resetOnSuccess !== false) {
+    if (config.resetOnSuccess === 'submitted') {
+      resetForm(form.values)
+    } else if (config.resetOnSuccess !== false) {
       resetForm()
     }
 

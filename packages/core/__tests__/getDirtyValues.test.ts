@@ -113,8 +113,10 @@ describe('getDirtyValues - atomic array replacement', () => {
     const values = { ...initialValues, tags: ['red', 'green'] }
     const form = mockForm(values, { 'tags.1': true })
     const result = getDirtyValues(form, { flat: true })
+    // toEqual is already an exact structural match - if this were the
+    // sparse shape (e.g. a literal 'tags.1' key, or { tags: { 1: ... } })
+    // instead of a real whole array under 'tags', it would fail right here.
     expect(result).toEqual({ tags: ['red', 'green'] })
-    expect(result).not.toHaveProperty('tags.1')
   })
 
   it('produces a real array, never a sparse { 1: value } index map', () => {

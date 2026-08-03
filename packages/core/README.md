@@ -185,7 +185,9 @@ A change under an array is always returned as the *whole* array, never a sparse 
 
 ```tsx
 const onSubmit = (values: ProfileValues) =>
-  api.patch(`/users/${id}`, getDirtyValues(form))
+  handleSubmit(form, resolver, () => api.patch(`/users/${id}`, getDirtyValues(form)), {
+    resetOnSuccess: 'submitted', // clears isDirty; keeps the saved values on screen
+  })
 
 // Flat, dot-notated keys instead of a nested object:
 getDirtyValues(form, { flat: true }) // { 'address.street': '...' }
@@ -194,6 +196,8 @@ getDirtyValues(form, { flat: true }) // { 'address.street': '...' }
 ### `handleSubmit(form, resolver, onSubmit, config?)`
 
 Validates, then calls `onSubmit`. Tracks status (`idle` → `submitting` → `success`/`error`) automatically. Touches all invalid fields on failure so errors are immediately visible.
+
+By default, resets the form back to its original values after a successful submit - right for a one-shot form like the signup example below. For an edit-and-save form where the just-submitted values should stay on screen (just no longer flagged as changed), pass `resetOnSuccess: 'submitted'` instead - see [`getDirtyValues`](#getdirtyvaluesform-options) for the PATCH-body half of that pattern. Either way, note that `initialValues` itself isn't reactive (`useForm` only reads it once, at mount) - a parent re-rendering with fresh data from a cache library after an unrelated refetch never touches the form on its own; `resetOnSuccess: 'submitted'` is what actually clears `isDirty` here, immediately, regardless of when that refetch resolves.
 
 ```tsx
 await handleSubmit(form, yupResolver(schema), async (values) => {
